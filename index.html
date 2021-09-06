@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music player</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.2/css/all.min.css" integrity="sha512-HK5fgLBL+xu6dm/Ii3z4xhlSUyZgTT9tuc/hSrtw6uzJOvgRr2a9jyxxT1ely+B+xFAmJKVSTbpM/CuL7qxO8w==" crossorigin="anonymous" />
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="player">
+        <!-- Dashboard -->
+        <div class="dashboard">
+          <!-- Header -->
+          <header>
+            <h4>Now playing:</h4>
+            <h2>String 57th & 9th</h2>
+          </header>
+      
+          <!-- CD -->
+          <div class="cd">
+            <div class="cd-thumb" style="background-image: url('https://i.pinimg.com/originals/f8/6f/33/f86f3378e656883b33594f06d78d1634.jpg')">
+            </div>
+          </div>
+      
+          <!-- Control -->
+          <div class="control">
+            <div class="btn btn-repeat">
+              <i class="fas fa-redo"></i>
+            </div>
+            <div class="btn btn-prev">
+              <i class="fas fa-step-backward"></i>
+            </div>
+            <div class="btn btn-toggle-play">
+              <i class="fas fa-pause icon-pause"></i>
+              <i class="fas fa-play icon-play"></i>
+            </div>
+            <div class="btn btn-next">
+              <i class="fas fa-step-forward"></i>
+            </div>
+            <div class="btn btn-random">
+              <i class="fas fa-random"></i>
+            </div>
+          </div>
+      
+          <input id="progress" class="progress" type="range" value="0" step="1" min="0" max="100">
+      
+          <audio id="audio" src=""></audio>
+        </div>
+      
+        <!-- Playlist -->
+        <div class="playlist">     
+        </div>
+
+      </div>
+
+      <script>
+        /*
+            1. Render playlist
+            2. Scroll top
+            3. Play / pause / seek
+            4. CD rotate
+            5. Next / prev
+            6. Random
+            7. Next / Repeat when the song end
+            8. Active song
+            9. Scroll into view when active song
+            10. When click playlist
+        */          
+
+        const $ = document.querySelector.bind(document);
+        const $$ = document.querySelectorAll.bind(document);
+
+        const PLAYER_STOGARE_KEY = 'QUAN_PLAYER';
+
+        const playlist = $('.playlist');
+        const cd = $('.cd');
+        const heading = $('header h2');
+        const thumb = $('.cd-thumb');
+        const audio = $('#audio');
+        const playBtn = $('.btn-toggle-play');
+        const player = $('.player');
+        const progress = $('#progress');
+        const btnNext = $('.btn-next');
+        const btnPrev = $('.btn-prev');
+        const btnRandom = $('.btn-random');
+        const btnRepeat = $('.btn-repeat');
+        var count = 0;
+        var arrayTemp = [];
+        
+        const app = {
+            currentIndex : 0,
+            isPlaying : false,
+            isRandom : false,
+            isRepeat: false,
+            config: JSON.parse(localStorage.getItem(PLAYER_STOGARE_KEY)) || {},
+
+            songs: [
+                {
+                    name: 'Nevada',
+                    singer: 'Vicetone',
+                    path: 'https://aredir.nixcdn.com/NhacCuaTui924/Nevada-Vicetone-4494556.mp3?st=_IjpS9u0LjapNgzm058wVw&e=1623143773',
+                    image: 'https://i.pinimg.com/originals/f8/6f/33/f86f3378e656883b33594f06d78d1634.jpg',
+                },
+
+                {
+                    name: 'Yoru ni kakeru',
+                    singer: 'YOASOBI',
+                    path: 'https://aredir.nixcdn.com/NhacCuaTui992/YoruNiKakeru-YOASOBI-6149490.mp3?st=68hnFhtGF6RukKDcDcW9Mw&e=1623132179',
+                    image: 'https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/16788ee5-3436-474a-84fd-6616063a1a9a/de2f4eq-bc67fa17-8dae-46a9-b85d-fe8082c34841.png?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7InBhdGgiOiJcL2ZcLzE2Nzg4ZWU1LTM0MzYtNDc0YS04NGZkLTY2MTYwNjNhMWE5YVwvZGUyZjRlcS1iYzY3ZmExNy04ZGFlLTQ2YTktYjg1ZC1mZTgwODJjMzQ4NDEucG5nIn1dXSwiYXVkIjpbInVybjpzZXJ2aWNlOmZpbGUuZG93bmxvYWQiXX0.dABuqANeQEs6FBfslZHdG1lW_gDwzf61yqiSABROSx0',
+                },
+
+                {
+                    name: 'Empress',
+                    singer: 'Calliope Mori',
+                    path: 'music/Empress Calliope ver__ - Mori Calliope.mp3',
+                    image: 'https://data.chiasenhac.com/data/cover/139/138420.jpg',
+                },
+
+                {
+                    name: 'Shitsurei shimasu Ga Shinde Kudasai',
+                    singer: 'Calliope Mori',
+                    path: 'music/ShitsureishimasuGaShindeKudasai-MoriCalliope-6654248.mp3',
+                    image: 'https://wallpapercave.com/wp/wp8220550.jpg',
+                },
+
+                {
+                    name: 'Lemon tree',
+                    singer: 'Fool\'s garden',
+                    path: 'music/LemonTree-FoolsGarden_45ena.mp3',
+                    image: 'https://img.discogs.com/Ldfa0bogh_zSONiS1ijmokJE6zI=/fit-in/600x600/filters:strip_icc():format(jpeg):mode_rgb():quality(90)/discogs-images/R-11229310-1512317021-3366.jpeg.jpg',
+                },
+
+                {
+                    name: 'Live again',
+                    singer: 'Calliope Mori',
+                    path: 'music/Live Again - Mori Calliope.mp3',
+                    image: 'https://i.ytimg.com/vi/h-LOlueKCtk/maxresdefault.jpg',
+                },
+
+                {
+                    name: 'King',
+                    singer: 'Gawr Gura & Calliope Mori',
+                    path: 'music/KING _ Gawr Gura x Calliope Mori (Cover) (320 kbps).mp3',
+                    image: 'https://images.genius.com/15272dad6e76af0f5a67e0952a78c315.1000x1000x1.png',
+                },
+
+                {
+                    name: 'Late night melancholy',
+                    singer: 'Rude Boy & White cherry',
+                    path: 'music/LateNightMelancholy_RudeBoyWhiteCherryBeatz_6737817.mp3',
+                    image: 'https://i.ytimg.com/vi/RxglYGHuqFc/maxresdefault.jpg',
+                },
+
+                {
+                    name: 'Palette',
+                    singer: 'Tokoyami Towa',
+                    path: 'music/Palette_TokoyamiTowa_6952702.mp3',
+                    image: 'https://static.zerochan.net/Tokoyami.Towa.full.3233355.jpg',
+                },
+            ],
+            
+            setConfig: function(key, value) {
+                this.config[key] = value;
+                localStorage.setItem(PLAYER_STOGARE_KEY, JSON.stringify(this.config));
+            },
+
+            defineProperties: function() {
+                Object.defineProperty(this, 'currentSong', {
+                    get: function() {
+                    return this.songs[this.currentIndex];
+                    }
+                })
+            },
+
+            handleEvent: function() {
+                var _this = this;
+                var cdWidth = cd.offsetWidth;
+
+                // Xử lý khi CD quay / dừng -> không đặt xử lý ở cuối sẽ bị lỗi render và play 
+                var cdThumbAnimate = thumb.animate([
+                    {transform: 'rotate(360deg)'},
+                ], {
+                    duration: 10000,
+                    iterations: Infinity
+                });     
+                cdThumbAnimate.pause();
+
+                // Xử lý phóng to thu nhỏ khi scroll
+                document.onscroll = function() {
+                    // có máy không có scrollTop , có máy không có scrollY
+                    const scrollTop = document.documentElement.scrollTop || window.scrollY;
+                    const newCdWidth = cdWidth - scrollTop;
+
+                    cd.style.width = newCdWidth > 0 ? newCdWidth + 'px' : 0; 
+                    cd.style.opacity = newCdWidth / cdWidth;
+                }
+
+                // Xử lý khi click play
+                playBtn.onclick = function() {
+                    if (_this.isPlaying) {
+                        audio.pause(); 
+                    } else {
+                        audio.play();
+                    }
+                }
+
+                // khi song được play
+                audio.onplay = function() {
+                    _this.isPlaying = true;
+                    player.classList.add('playing');
+                    cdThumbAnimate.play();
+                }
+
+                // khi song pause
+                audio.onpause = function() {
+                    _this.isPlaying = false;
+                    player.classList.remove('playing');
+                    cdThumbAnimate.pause();
+                }
+
+                //khi tiến độ bài hát thay đổi
+                audio.ontimeupdate = function() {
+                    if (audio.duration) {
+                        var progressPercent = Math.floor(audio.currentTime / audio.duration * 100);
+                        progress.value = progressPercent;
+                    } 
+                }
+
+                // Xử lý khi tua progress 
+                progress.oninput = function(e) {
+                    var seekTime = (audio.duration*e.target.value)/100;
+                    audio.currentTime = seekTime;
+                    audio.pause();
+                }
+
+                // Khi next song 
+                btnNext.onclick = function() {
+                    if (_this.isRandom) {
+                        _this.playRandomSong();
+                    } else {
+                        _this.nextSong();
+                    }
+                    audio.play();
+                    _this.scrollToActiveSong();
+                }
+
+                // Khi prev song 
+                btnPrev.onclick = function() {
+                    if (_this.isRandom) {
+                        _this.playRandomSong();
+                    } else {
+                        _this.prevSong();
+                    }
+                    audio.play();
+                    _this.scrollToActiveSong();
+                }
+
+                // Thêm và bỏ class active vào random
+                btnRandom.onclick = function(e) {
+                    _this.isRandom = !_this.isRandom;
+                    _this.setConfig('isRandom', _this.isRandom);
+                    btnRandom.classList.toggle("active", _this.isRandom);
+                }
+
+                // Xử lý Repeat a song
+                btnRepeat.onclick = function(e) {
+                    _this.isRepeat = !_this.isRepeat;
+                    _this.setConfig('isRepeat', _this.isRepeat);
+                    btnRepeat.classList.toggle("active", _this.isRepeat);
+                }
+
+                // Xử lý next song khi audio ended
+                audio.onended = function() {
+                    if (_this.isRepeat) {
+                        audio.play();
+                    } else {
+                        btnNext.click();
+                    }
+                }
+
+                // Xử lý lắng nghe khi click playlist
+                playlist.onclick = function(e) {
+                    // lấy song đang không có active
+                    // dùng closest để lấy class gần vị trí nhấp chuột nhất, tránh nhấp không được option
+                    var songNode = e.target.closest('.song:not(.active)');
+                    // tất cả những gì trên playlist trừ option ra đều sẽ thực thi
+                    if (!e.target.closest('.option')) {
+                        if (songNode) {
+                            _this.currentIndex = Number(songNode.dataset.index);
+                            _this.loadCurrentSong();
+                            audio.play();
+                        }
+                    } // else {} xử lý khi click vào option
+                }
+
+            },
+
+            render: function() {
+                const htmls = this.songs.map(function(song, index) {
+                    return `
+                    <div class="song" data-index="${index}">
+                        <div class="thumb" style="background-image: url('${song.image}')"></div>
+                        <div class="body">
+                            <h3 class="title">${song.name}</h3>
+                            <p class="author">${song.singer}</p>
+                        </div>
+                        <div class="option">
+                            <i class="fas fa-ellipsis-h"></i>
+                        </div>
+                    </div>
+                    `;
+                });
+
+                playlist.innerHTML = htmls.join('\n');
+            },
+
+            loadCurrentSong: function() {
+                heading.textContent = this.currentSong.name;
+                thumb.style.backgroundImage = `url('${this.currentSong.image}')`;
+                audio.src = this.currentSong.path;
+
+                const inActiveSong = playlist.querySelector('div.song.active');
+                if (inActiveSong) {            
+                    inActiveSong.classList.remove('active');
+                }
+                const activeSong = playlist.querySelectorAll('div.song');
+                activeSong[this.currentIndex].classList.add('active');
+            },
+
+            nextSong: function() {
+                ++this.currentIndex;
+                if (this.currentIndex >= this.songs.length) {
+                    this.currentIndex = 0;
+                }
+                this.loadCurrentSong();
+            },
+
+            prevSong: function() {
+                --this.currentIndex;
+                if (this.currentIndex < 0) {
+                    this.currentIndex = this.songs.length - 1;
+                }
+                this.loadCurrentSong();
+            },
+
+            playRandomSong: function() {
+                var newIndex;
+                newIndex = Math.floor(Math.random() * this.songs.length);     
+                if (count > 0) {
+                    do {
+                        newIndex = Math.floor(Math.random() * this.songs.length);
+                        var isCheck = arrayTemp.includes(newIndex);
+                    } while (isCheck == true)
+                }
+                arrayTemp[count] = newIndex;
+                this.currentIndex = newIndex;
+                this.loadCurrentSong();
+                if(count == this.songs.length-1)
+                {
+                    arrayTemp = [];
+                    count =- 1;
+                }
+                count++;
+            },
+
+            scrollToActiveSong: function() {
+                setTimeout(() => {
+                    if (this.currentIndex <= 3) {
+                        $('.song.active').scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'end',
+                        });
+                    } else {
+                        $('.song.active').scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'center',
+                        });
+                    }
+                }, 300);
+            },
+
+            loadConfig: function() {
+                this.isRandom = this.config.isRandom;
+                this.isRepeat = this.config.isRepeat;
+
+                // Object.assign(this, this.config)
+            },
+
+
+            start: function() {
+                // Gán cấu hình từ config vào ứng dụng
+                this.loadConfig();
+
+                // định nghĩa các thuộc tính cho Object
+                this.defineProperties();
+
+                // render playlist
+                this.render();
+
+                // tải bài hát hiện tại vào UI
+                this.loadCurrentSong(); 
+
+                // lắng nghe / xử lý các sự kiện (DOM events)
+                this.handleEvent();
+
+                // Hiển thị trạng thái ban đầu của button repeat và random
+                btnRandom.classList.toggle("active", this.isRandom);
+                btnRepeat.classList.toggle("active", this.isRepeat);
+            }
+        };
+        
+        app.start();
+
+      </script>
+
+</body>
+</html>
+
+
